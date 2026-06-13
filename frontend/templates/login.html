@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Agents LMS</title>
+    
+    <!-- Meta tags for SEO -->
+    <meta name="description" content="Access your LMS profile to learn or manage courses.">
+    
+    <!-- Outfit Font & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        },
+                        secondary: {
+                            500: '#10b981',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 flex items-center justify-center p-4">
+    
+    <!-- Theme Toggle Floating -->
+    <div class="fixed top-5 right-5">
+        <button onclick="toggleTheme()" class="h-10 w-10 bg-white dark:bg-slate-850 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full flex items-center justify-center shadow-lg border border-slate-200 dark:border-slate-700 transition duration-150 text-slate-600 dark:text-slate-300">
+            <i class="fa-solid fa-sun theme-toggle-sun hidden text-lg"></i>
+            <i class="fa-solid fa-moon theme-toggle-moon text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Login card -->
+    <div class="max-w-md w-full animate-fade-in-up bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-8">
+        
+        <!-- Logo Header -->
+        <div class="flex flex-col items-center mb-8">
+            <div class="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white text-xl shadow-lg shadow-primary-500/20 mb-4">
+                <i class="fa-solid fa-brain"></i>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Welcome Back</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Please enter your credentials to login</p>
+        </div>
+        
+        <!-- Error alert placeholder -->
+        <div id="error-alert" class="hidden bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 border border-rose-100 dark:border-rose-900/30 rounded-2xl p-4 text-sm flex gap-3 mb-6">
+            <i class="fa-solid fa-circle-exclamation text-lg mt-0.5"></i>
+            <span id="error-message">Invalid email or password.</span>
+        </div>
+        
+        <!-- Login Form -->
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label for="email" class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-envelope"></i>
+                    </span>
+                    <input type="email" id="email" required placeholder="name@domain.com" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 focus:border-primary-500 dark:focus:border-primary-500 rounded-2xl outline-none text-sm transition duration-150">
+                </div>
+            </div>
+            
+            <div>
+                <label for="password" class="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-500">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="password" required placeholder="••••••••" class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 focus:border-primary-500 dark:focus:border-primary-500 rounded-2xl outline-none text-sm transition duration-150">
+                </div>
+            </div>
+            
+            <button type="submit" id="submit-btn" class="w-full py-3.5 bg-primary-600 hover:bg-primary-500 text-white rounded-2xl font-semibold shadow-lg shadow-primary-500/25 flex items-center justify-center gap-2 transition duration-200 text-sm">
+                <span>Sign In</span>
+                <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+        </form>
+        
+        <!-- Register redirect -->
+        <p class="text-center text-sm text-slate-500 dark:text-slate-400 mt-8">
+            Don't have an account? 
+            <a href="/register" class="text-primary-600 dark:text-primary-400 font-semibold hover:underline">Sign up free</a>
+        </p>
+        
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/main.js"></script>
+    <script>
+        document.getElementById("login-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const errorAlert = document.getElementById("error-alert");
+            const errorMessage = document.getElementById("error-message");
+            const submitBtn = document.getElementById("submit-btn");
+            
+            errorAlert.classList.add("hidden");
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Logging in...</span>`;
+            
+            try {
+                const response = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || "Login credentials incorrect.");
+                }
+                
+                showToast("Welcome to Agents LMS!", "success");
+                setTimeout(() => {
+                    window.location.href = "/";
+                }, 800);
+                
+            } catch (error) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<span>Sign In</span> <i class="fa-solid fa-arrow-right text-xs"></i>`;
+                errorMessage.textContent = error.message;
+                errorAlert.classList.remove("hidden");
+            }
+        });
+    </script>
+</body>
+</html>

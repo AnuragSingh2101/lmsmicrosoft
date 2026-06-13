@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Study Room - Agents LMS{% endblock %}
+{% block header_title %}AI Study Assistant{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-fade-in-up h-[calc(100vh-140px)] overflow-hidden">
+    <!-- Left 1 Column: Chat context configuration & prompt shortcuts -->
+    <div class="lg:col-span-1 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 p-5 shadow-sm space-y-6 flex flex-col justify-between h-full overflow-y-auto">
+        <div class="space-y-6">
+            <div>
+                <label for="course-context-select" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Study Focus Context</label>
+                <select id="course-context-select" onchange="changeChatContext()" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs font-semibold">
+                    <option value="">General Study Guide</option>
+                    {% for enroll in enrollments %}
+                    <option value="{{ enroll.course_id }}">{{ enroll.course_title }}</option>
+                    {% endfor %}
+                </select>
+                <span class="text-[10px] text-slate-400 font-semibold block mt-1.5 leading-tight">Focusing on a subject helps the AI helper generate targeted responses and examples.</span>
+            </div>
+            
+            <!-- Quick prompt shortcuts -->
+            <div class="space-y-3">
+                <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Prompts</span>
+                <div class="flex flex-col gap-2">
+                    <button onclick="applyPromptTemplate('Explain the difference between synchronous and asynchronous architectures.')" class="p-3 text-left bg-slate-50 hover:bg-primary-50 hover:text-primary-600 dark:bg-slate-900 dark:hover:bg-slate-750 text-xxs font-semibold text-slate-650 rounded-2xl border border-slate-100 dark:border-slate-800 transition">
+                        Explain Async vs Sync
+                    </button>
+                    <button onclick="applyPromptTemplate('Give me a clean Python code example of Recursion with explanations.')" class="p-3 text-left bg-slate-50 hover:bg-primary-50 hover:text-primary-600 dark:bg-slate-900 dark:hover:bg-slate-750 text-xxs font-semibold text-slate-650 rounded-2xl border border-slate-100 dark:border-slate-800 transition">
+                        Recursion Code Example
+                    </button>
+                    <button onclick="applyPromptTemplate('Provide study tips to learn computer science concepts efficiently.')" class="p-3 text-left bg-slate-50 hover:bg-primary-50 hover:text-primary-600 dark:bg-slate-900 dark:hover:bg-slate-750 text-xxs font-semibold text-slate-650 rounded-2xl border border-slate-100 dark:border-slate-800 transition">
+                        Study Tips & Best Practices
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Emblem/Hackathon Tag -->
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-750/30 flex items-center gap-3">
+            <div class="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500 flex items-center justify-center text-base shrink-0">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+                <span class="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Powered By</span>
+                <span class="text-xs font-bold text-slate-850 dark:text-slate-200">Google Gemini API</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right 3 Columns: ChatGPT Main Workspace -->
+    <div class="lg:col-span-3 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-lg flex flex-col h-full overflow-hidden">
+        <!-- Chat Header -->
+        <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-750/30 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="h-10 w-10 rounded-xl bg-primary-100 text-primary-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-robot"></i>
+                </div>
+                <div>
+                    <h4 id="chat-header-title" class="font-bold text-sm text-slate-850 dark:text-white">General Study Guide Chat</h4>
+                    <span class="text-xxs text-slate-400 font-semibold block leading-none mt-0.5">Ask anything or select a course context</span>
+                </div>
+            </div>
+            <button onclick="clearChatHistory()" class="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-450 dark:text-slate-450 flex items-center justify-center transition border border-slate-100 dark:border-slate-750" title="Reset chat"><i class="fa-solid fa-trash-can text-xs"></i></button>
+        </div>
+        
+        <!-- Conversation Thread -->
+        <div id="widescreen-chat-messages" class="flex-grow p-6 overflow-y-auto space-y-4 text-xs">
+            <!-- Welcome Instructions -->
+            <div id="chat-instructions-placeholder" class="bg-blue-50 dark:bg-primary-950/20 border border-blue-100 dark:border-primary-900/30 p-5 rounded-2xl text-slate-605 text-slate-600 dark:text-slate-350 leading-relaxed flex gap-4 max-w-2xl mx-auto my-6">
+                <i class="fa-solid fa-circle-info text-primary-500 text-2xl shrink-0 mt-0.5"></i>
+                <div class="space-y-2">
+                    <h5 class="font-extrabold text-slate-800 dark:text-white text-sm">Welcome to the AI Study Room!</h5>
+                    <p>This study assistant is powered by Google Gemini API to guide you through your learning syllabus.</p>
+                    <p class="font-bold">What you can do here:</p>
+                    <ul class="list-disc pl-5 space-y-1 font-semibold text-xxs">
+                        <li>Ask complex engineering/programming questions</li>
+                        <li>Ask for code examples and logic explanations</li>
+                        <li>Select a course context in the left sidebar to specialize chat topics</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input Area -->
+        <div class="p-5 border-t border-slate-100 dark:border-slate-750/30 bg-slate-50/20 dark:bg-slate-900/10 flex gap-2 shrink-0">
+            <input type="text" id="widescreen-chat-input" placeholder="Explain how React hooks update state..." class="flex-grow px-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-2xl outline-none text-xs" onkeydown="handleChatKey(event)">
+            <button id="widescreen-send-btn" onclick="sendChatMessage()" class="h-11 w-11 bg-primary-600 hover:bg-primary-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary-500/25 transition shrink-0"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadChatHistory();
+    });
+    
+    function changeChatContext() {
+        const select = document.getElementById("course-context-select");
+        const title = select.options[select.selectedIndex].text;
+        
+        document.getElementById("chat-header-title").textContent = title + " Chat";
+        loadChatHistory();
+    }
+    
+    function applyPromptTemplate(text) {
+        document.getElementById("widescreen-chat-input").value = text;
+        sendChatMessage();
+    }
+    
+    function handleChatKey(e) {
+        if (e.key === "Enter") {
+            sendChatMessage();
+        }
+    }
+    
+    async function loadChatHistory() {
+        const container = document.getElementById("widescreen-chat-messages");
+        const courseId = document.getElementById("course-context-select").value;
+        
+        container.innerHTML = `<div class="text-slate-400 py-12 text-center"><i class="fa-solid fa-spinner fa-spin text-xl mb-2 block"></i> Loading messages history...</div>`;
+        
+        try {
+            const history = await apiRequest(`/api/chat/history?course_id=${courseId}`);
+            container.innerHTML = "";
+            
+            if (history && history.length > 0) {
+                history.forEach(msg => {
+                    appendMessageBubble(msg.sender, msg.text);
+                });
+                scrollChatToBottom();
+            } else {
+                // Render default instructions placeholder
+                container.innerHTML = `
+                    <div class="bg-blue-50 dark:bg-primary-950/20 border border-blue-100 dark:border-primary-900/30 p-5 rounded-2xl text-slate-600 dark:text-slate-350 leading-relaxed flex gap-4 max-w-2xl mx-auto my-6">
+                        <i class="fa-solid fa-circle-info text-primary-500 text-2xl shrink-0 mt-0.5"></i>
+                        <div class="space-y-2">
+                            <h5 class="font-extrabold text-slate-800 dark:text-white text-sm font-sans">Welcome to the AI Study Room!</h5>
+                            <p>Send a message to begin your study conversation context!</p>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (e) {
+            container.innerHTML = `<div class="text-rose-500 text-center py-12">Failed to load chat history.</div>`;
+        }
+    }
+    
+    async function sendChatMessage() {
+        const input = document.getElementById("widescreen-chat-input");
+        const text = input.value.trim();
+        const courseId = document.getElementById("course-context-select").value;
+        const sendBtn = document.getElementById("widescreen-send-btn");
+        
+        if (!text) return;
+        
+        // Remove instructions if present
+        const container = document.getElementById("widescreen-chat-messages");
+        if (container.querySelector(".bg-blue-50")) {
+            container.innerHTML = "";
+        }
+        
+        // Append user bubble
+        appendMessageBubble("user", text);
+        input.value = "";
+        scrollChatToBottom();
+        
+        // Append loader
+        const loader = document.createElement("div");
+        loader.className = "flex justify-start items-center gap-1.5 text-slate-450 dark:text-slate-500 py-3 animate-pulse";
+        loader.id = "widescreen-chat-loader";
+        loader.innerHTML = `<i class="fa-solid fa-robot text-primary-500 mr-1.5"></i> AI is thinking...`;
+        container.appendChild(loader);
+        scrollChatToBottom();
+        
+        try {
+            const data = await apiRequest("/api/chat", {
+                method: "POST",
+                body: JSON.stringify({
+                    message: text,
+                    course_id: courseId
+                })
+            });
+            
+            loader.remove();
+            appendMessageBubble("ai", data.reply);
+            scrollChatToBottom();
+            
+        } catch (error) {
+            loader.remove();
+            appendMessageBubble("ai", "Sorry, I encountered an error answering your question. Please check your network or try again.");
+            scrollChatToBottom();
+        }
+    }
+    
+    function appendMessageBubble(sender, text) {
+        const container = document.getElementById("widescreen-chat-messages");
+        const bubble = document.createElement("div");
+        
+        const isUser = (sender === "user");
+        bubble.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+        
+        const colorClass = isUser ? 'message-user' : 'message-ai';
+        
+        // Simple Markdown Regex Parser
+        let formattedText = text;
+        if (!isUser) {
+            formattedText = text
+                .replace(/### (.*?)\n/g, '<h5 class="font-bold text-sm mt-3 mb-1">$1</h5>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-slate-900 dark:text-white">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                .replace(/```(?:[a-zA-Z]+)?\n([\s\S]*?)\n```/g, '<pre class="bg-slate-950 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto my-3 select-all leading-normal">$1</pre>')
+                .replace(/`([^`]+)`/g, '<code class="bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded font-mono text-red-500 dark:text-rose-400">$1</code>')
+                .replace(/\n/g, "<br>");
+        } else {
+            formattedText = text.replace(/\n/g, "<br>");
+        }
+        
+        bubble.innerHTML = `
+            <div class="message-bubble ${colorClass} text-xs leading-relaxed max-w-[80%]">
+                ${formattedText}
+            </div>
+        `;
+        container.appendChild(bubble);
+    }
+    
+    function scrollChatToBottom() {
+        const container = document.getElementById("widescreen-chat-messages");
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    function clearChatHistory() {
+        if (confirm("Do you want to reset this chat screen dialog?")) {
+            document.getElementById("widescreen-chat-messages").innerHTML = `
+                <div class="text-slate-400 py-12 text-center text-xs">Chat screen cleared.</div>
+            `;
+        }
+    }
+</script>
+{% endblock %}

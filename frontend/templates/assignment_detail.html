@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ assignment.title }} - Homework Workspace{% endblock %}
+{% block header_title %}Assignment Workspace{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in-up pb-8">
+    <!-- Breadcrumb back -->
+    <a href="/course/{{ course._id }}" class="text-xs font-bold text-slate-400 hover:text-slate-650 flex items-center gap-1">
+        <i class="fa-solid fa-arrow-left text-xxs"></i>
+        <span>Back to Course Syllabus</span>
+    </a>
+    
+    <!-- Details Box -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700/60 shadow-lg space-y-4">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-50 dark:border-slate-750/30 pb-4">
+            <div>
+                <span class="text-xxs font-bold text-slate-450 uppercase block">Course: {{ course.title }}</span>
+                <h3 class="text-xl font-extrabold text-slate-850 dark:text-white leading-snug mt-1">{{ assignment.title }}</h3>
+            </div>
+            
+            <div class="flex gap-4 text-xs font-bold shrink-0">
+                <div class="text-slate-450 dark:text-slate-550 border-r border-slate-100 dark:border-slate-750 pr-4">
+                    <span class="text-xxs block text-slate-400 uppercase">Maximum Marks</span>
+                    <span class="text-primary-500 font-extrabold text-base">{{ assignment.max_marks }}</span>
+                </div>
+                <div>
+                    <span class="text-xxs block text-slate-400 uppercase">Due Date</span>
+                    <span class="text-slate-700 dark:text-slate-300 font-semibold text-sm">{{ assignment.due_date | string | truncate(16, True, '') }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Instructions</h4>
+            <p class="text-xs text-slate-600 dark:text-slate-350 leading-relaxed font-sans pre-wrap">{{ assignment.instructions }}</p>
+        </div>
+    </div>
+    
+    <!-- Grid splits depending on Student vs Teacher -->
+    <div class="max-w-4xl">
+        {% if user.role == 'student' %}
+        <!-- ================= STUDENT VIEW ================= -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-6">
+            <div>
+                <h4 class="font-bold text-base">My Submission Status</h4>
+                <p class="text-xs text-slate-500 mt-1">Upload your files or view evaluation feedback.</p>
+            </div>
+            
+            {% if submission %}
+                <!-- Graded vs Pending Banner -->
+                {% if submission.grade is not none %}
+                <div class="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-805 dark:text-emerald-350 rounded-2xl p-5 border border-emerald-200/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h5 class="font-extrabold text-sm flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Graded & Evaluated</h5>
+                        <p class="text-xxs mt-1 text-slate-500">Your work has been graded by the instructor.</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-xxs text-slate-400 uppercase block font-bold">Grade Scored</span>
+                        <span class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">{{ submission.grade }} / {{ assignment.max_marks }}</span>
+                    </div>
+                </div>
+                
+                {% if submission.feedback %}
+                <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/80 text-xs">
+                    <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1"><i class="fa-solid fa-comments text-primary-500 mr-1.5"></i>Instructor Feedback:</span>
+                    <p class="text-slate-505 text-slate-600 dark:text-slate-400 leading-relaxed italic">"{{ submission.feedback }}"</p>
+                </div>
+                {% endif %}
+                
+                {% else %}
+                <div class="bg-amber-50 dark:bg-amber-950/20 text-amber-805 dark:text-amber-350 rounded-2xl p-4 border border-amber-200/50 flex gap-3">
+                    <i class="fa-solid fa-clock text-lg text-amber-500 mt-0.5"></i>
+                    <div>
+                        <h5 class="font-extrabold text-sm">Submission Received</h5>
+                        <p class="text-xxs mt-0.5 text-slate-500 leading-relaxed">Your submission is currently pending evaluation. You may re-submit your files below if you need to make changes.</p>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <i class="fa-solid fa-file-arrow-up text-primary-500 text-lg"></i>
+                        <span class="font-semibold truncate">{{ submission.file_path.split('/')[-1] }}</span>
+                    </div>
+                    <a href="/{{ submission.file_path }}" target="_blank" class="text-primary-600 dark:text-primary-400 font-bold hover:underline">View Uploaded File</a>
+                </div>
+            {% else %}
+                <!-- No submission -->
+                <div class="border-2 border-dashed border-slate-200 dark:border-slate-700 p-8 rounded-3xl text-center text-slate-500 dark:text-slate-400">
+                    <i class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 dark:text-slate-650 mb-3 block animate-pulse"></i>
+                    <p class="font-bold">No submission found</p>
+                    <p class="text-xs mt-1">Submit your code, PDF report, or ZIP archives before the due date.</p>
+                </div>
+            {% endif %}
+            
+            <!-- Upload Box (Allowed if not graded) -->
+            {% if not submission or submission.grade is none %}
+            <form id="submission-form" class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-750/30">
+                <div>
+                    <label for="submission-file" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Upload Files</label>
+                    <input type="file" id="submission-file" required class="w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-750 hover:file:bg-primary-100">
+                </div>
+                <button type="submit" id="submit-btn" class="w-full py-3.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold shadow-lg transition text-xs flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-circle-arrow-up"></i>
+                    <span>{% if submission %}Submit Again (Overwrite){% else %}Submit Assignment{% endif %}</span>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+        
+        {% else %}
+        <!-- ================= TEACHER VIEW (SUBMISSIONS QUEUE) ================= -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden space-y-4">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-700/60">
+                <h4 class="font-bold text-base">Grading Pipeline</h4>
+                <p class="text-xs text-slate-500 mt-1">Review student uploads, check submission timestamps, and issue marks.</p>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-700/60 text-slate-400 dark:text-slate-550 text-xxs font-bold uppercase tracking-wider">
+                            <th class="py-4 px-6">Student details</th>
+                            <th class="py-4 px-6">Date Submitted</th>
+                            <th class="py-4 px-6 text-center">Attachment</th>
+                            <th class="py-4 px-6 text-center">Grade Status</th>
+                            <th class="py-4 px-6 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-750/30 text-xs">
+                        {% if submissions %}
+                            {% for sub in submissions %}
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-750/10 transition">
+                                <td class="py-4 px-6">
+                                    <div class="font-bold text-slate-850 dark:text-white leading-snug">{{ sub.student_name }}</div>
+                                    <div class="text-[10px] text-slate-450 dark:text-slate-500 font-semibold leading-none mt-0.5">{{ sub.student_email }}</div>
+                                </td>
+                                <td class="py-4 px-6 text-slate-500">{{ sub.submitted_at | string | truncate(16, True, '') }}</td>
+                                <td class="py-4 px-6 text-center">
+                                    <a href="/{{ sub.file_path }}" target="_blank" class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-750 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xxs font-bold text-slate-700 dark:text-slate-300 inline-flex items-center gap-1.5">
+                                        <i class="fa-solid fa-download text-xs text-primary-500"></i>
+                                        <span>Download</span>
+                                    </a>
+                                </td>
+                                <td class="py-4 px-6 text-center">
+                                    {% if sub.grade is not none %}
+                                    <span class="inline-block px-2.5 py-1 bg-emerald-100 text-emerald-805 dark:bg-emerald-950/40 dark:text-emerald-350 rounded-lg text-xxs font-bold uppercase">{{ sub.grade }} / {{ assignment.max_marks }}</span>
+                                    {% else %}
+                                    <span class="inline-block px-2.5 py-1 bg-amber-100 text-amber-805 dark:bg-amber-950/40 dark:text-amber-350 rounded-lg text-xxs font-bold uppercase">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td class="py-4 px-6 text-right">
+                                    <button onclick="openGradingModal('{{ sub._id }}', '{{ sub.student_name }}', '{{ sub.grade or '' }}', '{{ sub.feedback or '' }}')" class="px-3.5 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl text-xxs font-bold transition">
+                                        <span>Grade Work</span>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="py-12 text-center text-slate-450 dark:text-slate-500">
+                                    <i class="fa-solid fa-inbox text-4xl text-slate-250 dark:text-slate-650 mb-3 block"></i>
+                                    <p class="font-bold">No submissions found</p>
+                                    <p class="text-xs mt-1">Students have not uploaded submissions for this assignment yet.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Grading Input Modal (Teacher Only) -->
+        <div id="grading-modal" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-slate-800 max-w-md w-full border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <h4 class="text-lg font-bold">Grade Student Submission</h4>
+                    <button onclick="closeGradingModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+                
+                <form id="grading-form" class="space-y-4 text-xs">
+                    <input type="hidden" id="grade-sub-id">
+                    <div>
+                        <span class="block text-slate-400 font-bold uppercase mb-1">Student Name</span>
+                        <h5 id="grade-student-name" class="font-bold text-sm text-slate-800 dark:text-white leading-none">--</h5>
+                    </div>
+                    <div>
+                        <label for="grade-marks" class="block text-xs font-bold text-slate-400 uppercase mb-2">Marks Scored (Max: {{ assignment.max_marks }})</label>
+                        <input type="number" id="grade-marks" required min="0" max="{{ assignment.max_marks }}" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+                    </div>
+                    <div>
+                        <label for="grade-feedback" class="block text-xs font-bold text-slate-400 uppercase mb-2">Feedback & Comments</label>
+                        <textarea id="grade-feedback" rows="3" placeholder="Provide constructive advice, comments, or grading explanations..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md">Submit Evaluation</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    {% if user.role == 'student' and (not submission or submission.grade is none) %}
+    document.getElementById("submission-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const file = document.getElementById("submission-file").files[0];
+        const btn = document.getElementById("submit-btn");
+        
+        if (!file) return;
+        
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Uploading...`;
+        
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        try {
+            const response = await fetch("/api/assignments/{{ assignment._id }}/submit", {
+                method: "POST",
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || "File upload failed.");
+            }
+            
+            showToast("Assignment uploaded successfully!", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+            
+        } catch (error) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-circle-arrow-up"></i> <span>Submit Assignment</span>`;
+            showToast("Upload failed: " + error.message, "error");
+        }
+    });
+    {% endif %}
+    
+    {% if user.role == 'teacher' and is_owner %}
+    function openGradingModal(subId, studentName, grade, feedback) {
+        document.getElementById("grade-sub-id").value = subId;
+        document.getElementById("grade-student-name").textContent = studentName;
+        document.getElementById("grade-marks").value = grade;
+        document.getElementById("grade-feedback").value = feedback;
+        
+        document.getElementById("grading-modal").classList.remove("hidden");
+    }
+    
+    function closeGradingModal() {
+        document.getElementById("grading-modal").classList.add("hidden");
+    }
+    
+    document.getElementById("grading-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const subId = document.getElementById("grade-sub-id").value;
+        const grade = document.getElementById("grade-marks").value;
+        const feedback = document.getElementById("grade-feedback").value;
+        
+        try {
+            await apiRequest(`/api/submissions/${subId}/grade`, {
+                method: "POST",
+                body: JSON.stringify({ grade, feedback })
+            });
+            showToast("Grade updated successfully!", "success");
+            closeGradingModal();
+            setTimeout(() => {
+                window.location.reload();
+            }, 600);
+        } catch (error) {
+            showToast("Failed to submit grade: " + error.message, "error");
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

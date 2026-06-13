@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Certificate - Agents LMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                        },
+                        secondary: {
+                            500: '#10b981',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex items-center justify-center p-4">
+    <div class="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+        
+        <!-- Header Banner -->
+        <div class="h-32 bg-gradient-to-br from-primary-600 to-secondary-500 flex items-center justify-center text-white relative">
+            <div class="absolute -bottom-8 bg-white dark:bg-slate-800 h-16 w-16 rounded-full flex items-center justify-center shadow-lg border-4 border-slate-50 dark:border-slate-900">
+                {% if cert %}
+                <i class="fa-solid fa-certificate text-emerald-500 text-3xl"></i>
+                {% else %}
+                <i class="fa-solid fa-circle-xmark text-rose-500 text-3xl"></i>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="pt-12 p-8 text-center">
+            {% if cert %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/55 dark:text-emerald-300 mb-4 uppercase tracking-wide">
+                <i class="fa-solid fa-circle-check mr-1 text-sm"></i> Verified Authentic
+            </span>
+            
+            <h2 class="text-2xl font-bold mb-2">Certificate Verified</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">This document is registered in the Agents LMS blockchain verification records.</p>
+            
+            <!-- Details Card -->
+            <div class="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 text-left border border-slate-100 dark:border-slate-800 space-y-4 mb-6">
+                <div>
+                    <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Recipient Name</span>
+                    <h4 class="text-base font-bold text-slate-800 dark:text-white">{{ cert.student_name }}</h4>
+                </div>
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-3">
+                    <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Course Curriculum Completed</span>
+                    <h4 class="text-base font-bold text-slate-800 dark:text-white">{{ cert.course_title }}</h4>
+                </div>
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-3 flex justify-between gap-4">
+                    <div>
+                        <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Date Issued</span>
+                        <h4 class="text-sm font-semibold text-slate-800 dark:text-white">{{ cert.issue_date }}</h4>
+                    </div>
+                    <div>
+                        <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Verification Code</span>
+                        <h4 class="text-sm font-semibold text-slate-800 dark:text-white font-mono">{{ cert.certificate_id }}</h4>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex flex-col gap-2">
+                <a href="/{{ cert.file_path }}" target="_blank" class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-semibold shadow-lg shadow-primary-500/20 flex items-center justify-center gap-2 transition duration-200 text-sm">
+                    <i class="fa-solid fa-file-arrow-down text-lg"></i> View PDF Certificate
+                </a>
+                <a href="/" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-semibold transition duration-200 text-xs">
+                    Go to LMS Portal
+                </a>
+            </div>
+            
+            {% else %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/55 dark:text-rose-300 mb-4 uppercase tracking-wide">
+                <i class="fa-solid fa-triangle-exclamation mr-1 text-sm"></i> Verification Failed
+            </span>
+            
+            <h2 class="text-2xl font-bold mb-2">Invalid Document ID</h2>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">The verification code you provided does not exist in the LMS registry database.</p>
+            
+            <div class="bg-rose-50 dark:bg-rose-950/20 text-rose-800 dark:text-rose-300 rounded-2xl p-4 text-left border border-rose-100 dark:border-rose-900/30 text-xs flex gap-3 mb-6">
+                <i class="fa-solid fa-triangle-exclamation text-base mt-0.5"></i>
+                <p>This could be due to a revoked certification, an invalid QR code link, or an unrecorded issue. Please check with the LMS coordinator.</p>
+            </div>
+            
+            <a href="/" class="w-full block py-3 bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:hover:bg-slate-100 dark:text-slate-800 rounded-xl font-semibold transition duration-200 text-sm">
+                Go to LMS Portal
+            </a>
+            {% endif %}
+        </div>
+        
+    </div>
+</body>
+</html>

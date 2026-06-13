@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Course: {{ course.title }} - Agents LMS{% endblock %}
+{% block header_title %}Edit Course details{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6 animate-fade-in-up">
+    <!-- Breadcrumb back -->
+    <a href="/course/{{ course._id }}" class="text-xs font-bold text-slate-400 hover:text-slate-650 flex items-center gap-1">
+        <i class="fa-solid fa-arrow-left text-xxs"></i>
+        <span>Cancel & Back to Syllabus</span>
+    </a>
+    
+    <!-- Edit Card -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-lg p-6 md:p-8 space-y-6">
+        <div>
+            <h4 class="text-lg font-bold">Modify Course Metadata</h4>
+            <p class="text-xs text-slate-500 mt-1">Make edits to your course description and categorization.</p>
+        </div>
+        
+        <form id="edit-course-form" class="space-y-5">
+            <div>
+                <label for="title" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Course Title</label>
+                <input type="text" id="title" required value="{{ course.title }}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-2xl outline-none text-xs transition duration-150">
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="category" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Subject / Category</label>
+                    <input type="text" id="category" required value="{{ course.category }}" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-2xl outline-none text-xs transition duration-150">
+                </div>
+                <div>
+                    <label for="thumbnail" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Change Thumbnail</label>
+                    <input type="file" id="thumbnail" accept="image/*" class="w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-750 hover:file:bg-primary-100">
+                </div>
+            </div>
+            
+            <div>
+                <label for="description" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Course Description</label>
+                <textarea id="description" required rows="5" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-2xl outline-none text-xs transition duration-150">{{ course.description }}</textarea>
+            </div>
+            
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-750/30 flex justify-end gap-3">
+                <a href="/course/{{ course._id }}" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition text-xs">
+                    Cancel
+                </a>
+                <button type="submit" id="submit-btn" class="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md shadow-primary-500/20 flex items-center gap-1.5">
+                    <span>Save Changes</span>
+                    <i class="fa-solid fa-check text-xs"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.getElementById("edit-course-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const title = document.getElementById("title").value;
+        const category = document.getElementById("category").value;
+        const description = document.getElementById("description").value;
+        const thumbnailFile = document.getElementById("thumbnail").files[0];
+        
+        const submitBtn = document.getElementById("submit-btn");
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
+        
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("category", category);
+        formData.append("description", description);
+        if (thumbnailFile) {
+            formData.append("thumbnail", thumbnailFile);
+        }
+        
+        try {
+            const response = await fetch("/api/courses/{{ course._id }}", {
+                method: "PUT",
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to update course.");
+            }
+            
+            showToast("Course details updated successfully!", "success");
+            setTimeout(() => {
+                window.location.href = `/course/{{ course._id }}`;
+            }, 800);
+            
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<span>Save Changes</span> <i class="fa-solid fa-check text-xs"></i>`;
+            showToast("Error: " + error.message, "error");
+        }
+    });
+</script>
+{% endblock %}

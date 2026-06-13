@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ lesson.title }} - Agents LMS{% endblock %}
+{% block header_title %}Lesson Player{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 xl:grid-cols-4 gap-6 animate-fade-in-up h-full pb-4">
+    <!-- Left 3 Columns: Video Player, Notes, and AI Chat -->
+    <div class="xl:col-span-3 space-y-6 flex flex-col">
+        
+        <!-- Video Player card -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden shrink-0">
+            {% if lesson.youtube_id %}
+            <div class="aspect-video w-full bg-black relative">
+                <iframe id="lesson-video-player" src="https://www.youtube.com/embed/{{ lesson.youtube_id }}?enablejsapi=1" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            {% else %}
+            <!-- Placeholder if no video ID -->
+            <div class="aspect-video w-full bg-slate-900 flex flex-col items-center justify-center text-slate-500 p-8 text-center shrink-0">
+                <i class="fa-solid fa-circle-play text-6xl text-slate-700 mb-3 block animate-pulse"></i>
+                <h4 class="font-bold">No Video Tutorial Added</h4>
+                <p class="text-xs mt-1">Review the attached lecture notes PDF on the sidebar below.</p>
+            </div>
+            {% endif %}
+            
+            <div class="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-t border-slate-50 dark:border-slate-750/30">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-white leading-snug">{{ lesson.title }}</h3>
+                    <p class="text-xs text-slate-400 mt-1"><i class="fa-solid fa-clock mr-1"></i>Duration: {{ lesson.duration or '10' }} minutes</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 shrink-0">
+                    {% if lesson.notes_path %}
+                    <a href="/{{ lesson.notes_path }}" download class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-655 text-slate-805 dark:hover:bg-slate-600 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf text-sm text-rose-500"></i>
+                        <span>Download Notes</span>
+                    </a>
+                    {% endif %}
+                    
+                    {% if user.role == 'student' %}
+                    <button id="complete-btn" onclick="markLessonComplete()" class="px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 {% if lesson._id | string in progress.completed_lessons %}bg-emerald-100 text-emerald-805 dark:bg-emerald-950/45 dark:text-emerald-300 border border-emerald-200/50{% else %}bg-primary-600 hover:bg-primary-500 text-white shadow-md{% endif %}">
+                        {% if lesson._id | string in progress.completed_lessons %}
+                        <i class="fa-solid fa-circle-check text-sm"></i>
+                        <span>Lesson Completed</span>
+                        {% else %}
+                        <i class="fa-solid fa-circle-half-stroke text-sm"></i>
+                        <span>Mark as Completed</span>
+                        {% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lesson description details -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-6 shadow-sm shrink-0">
+            <h4 class="font-bold text-sm text-slate-400 uppercase tracking-wide mb-2">Lesson Description</h4>
+            <p class="text-xs text-slate-600 dark:text-slate-350 leading-relaxed">{{ lesson.description }}</p>
+        </div>
+        
+        <!-- AI Study Chat area -->
+        {% if user.role == 'student' %}
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm flex flex-col h-[400px] overflow-hidden flex-grow">
+            <!-- Header -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-750/30 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-robot text-primary-500 text-lg animate-pulse"></i>
+                    <div>
+                        <h4 class="font-bold text-sm">AI Study Room</h4>
+                        <span class="text-xxs text-slate-400 font-semibold block leading-none">Ask questions about this lesson note</span>
+                    </div>
+                </div>
+                <button onclick="clearChatHistory()" class="text-slate-400 hover:text-slate-600 transition" title="Clear chat thread"><i class="fa-solid fa-trash-can text-xs"></i></button>
+            </div>
+            
+            <!-- Messages scroll view -->
+            <div id="chat-messages-container" class="flex-grow p-5 overflow-y-auto space-y-4 text-xs">
+                <!-- Loaded via JS -->
+                <div class="bg-blue-50 dark:bg-primary-950/20 border border-blue-100 dark:border-primary-900/30 p-4 rounded-2xl text-slate-600 dark:text-slate-350 leading-relaxed flex gap-3">
+                    <i class="fa-solid fa-circle-info text-primary-500 text-lg mt-0.5 shrink-0"></i>
+                    <div>
+                        <p class="font-semibold text-slate-800 dark:text-white">Need help understanding this lesson?</p>
+                        <p class="mt-0.5">I can explain difficult concepts, write python code demonstrations, or summarize notes. Type your query below to begin!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input area -->
+            <div class="p-4 border-t border-slate-100 dark:border-slate-750/30 bg-white dark:bg-slate-800 flex gap-2 shrink-0">
+                <input type="text" id="chat-input" placeholder="Explain the concept of this lesson..." class="flex-grow px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs" onkeydown="handleChatKey(event)">
+                <button id="send-chat-btn" onclick="sendChatMessage()" class="h-10 w-10 bg-primary-600 hover:bg-primary-500 text-white rounded-xl flex items-center justify-center shadow-md shadow-primary-500/20 transition shrink-0"><i class="fa-solid fa-paper-plane text-xs"></i></button>
+            </div>
+        </div>
+        {% endif %}
+        
+    </div>
+    
+    <!-- Right 1 Column: Lessons index checklist sidebar, and quiz launch modules -->
+    <div class="space-y-6">
+        
+        <!-- AI Quiz Card -->
+        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20 rounded-2xl border border-indigo-150/40 dark:border-slate-750 p-5 shadow-sm space-y-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-indigo-550 text-indigo-500 text-lg"></i>
+                <h4 class="font-extrabold text-sm text-slate-800 dark:text-white">Lesson MCQ Quiz</h4>
+            </div>
+            
+            <div id="quiz-status-content" class="text-xs space-y-3">
+                <!-- Dynamically loaded status -->
+                <div class="text-slate-400 py-3 text-center"><i class="fa-solid fa-spinner fa-spin text-sm"></i> Loading quiz...</div>
+            </div>
+        </div>
+        
+        <!-- Collapsible Lessons Syllabus Checklist -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-750/30 flex items-center gap-2 shrink-0">
+                <i class="fa-solid fa-list-ol text-slate-400 dark:text-slate-500 text-base"></i>
+                <h4 class="font-bold text-sm">Course Syllabus</h4>
+            </div>
+            
+            <nav class="p-2 space-y-0.5 max-h-[350px] overflow-y-auto">
+                {% for l in all_lessons %}
+                <a href="/lesson/{{ l._id }}" class="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold leading-snug transition {% if l._id | string == lesson._id | string %}bg-primary-50 text-primary-600 dark:bg-slate-750 dark:text-primary-400{% else %}text-slate-600 dark:text-slate-350{% endif %}">
+                    <span class="shrink-0 flex items-center justify-center">
+                        {% if user.role == 'student' %}
+                            {% if l._id | string in progress.completed_lessons %}
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+                            {% else %}
+                            <i class="fa-regular fa-circle text-slate-300 dark:text-slate-600 text-sm"></i>
+                            {% endif %}
+                        {% else %}
+                            <i class="fa-regular fa-file-lines text-slate-400 text-xs"></i>
+                        {% endif %}
+                    </span>
+                    <span class="truncate">{{ l.title }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+        </div>
+        
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadQuizStatus();
+        {% if user.role == 'student' %}
+        loadChatHistory();
+        trackVideoWatch();
+        {% endif %}
+    });
+    
+    // --- Video watch analytics logger ---
+    function trackVideoWatch() {
+        // Automatically call the watch endpoint in the background on load
+        // to record video watched metrics
+        fetch(`/api/courses/{{ course._id }}/lessons/{{ lesson._id }}/watch`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        }).catch(err => console.log("Video watch track failed", err));
+    }
+    
+    // --- Quiz details loading ---
+    async function loadQuizStatus() {
+        const container = document.getElementById("quiz-status-content");
+        try {
+            const data = await apiRequest(`/api/lessons/{{ lesson._id }}/quiz`);
+            container.innerHTML = "";
+            
+            if (!data.quiz) {
+                // Quiz doesn't exist
+                if ("{{ user.role }}" === "teacher") {
+                    container.innerHTML = `
+                        <p class="text-slate-500 leading-relaxed mb-3">No evaluation quiz has been generated for this lesson syllabus yet.</p>
+                        <button id="generate-quiz-btn" onclick="generateAIQuiz()" class="w-full py-2.5 bg-indigo-650 hover:bg-indigo-550 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            <span>Generate AI Quiz</span>
+                        </button>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="bg-indigo-950/20 text-indigo-800 dark:text-indigo-400 rounded-xl p-3 border border-indigo-200/50 flex gap-2">
+                            <i class="fa-solid fa-circle-info text-base shrink-0 mt-0.5"></i>
+                            <p>Quiz questions are not generated yet. Ask your instructor to trigger AI generation!</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+            
+            // Quiz exists
+            const q = data.quiz;
+            const myScore = data.my_score;
+            
+            if ("{{ user.role }}" === "student") {
+                if (myScore) {
+                    const pct = Math.round((myScore.score / myScore.total_questions) * 100);
+                    container.innerHTML = `
+                        <div class="bg-emerald-50 dark:bg-emerald-950/20 text-emerald-805 dark:text-emerald-300 rounded-2xl p-4 border border-emerald-250 border-emerald-200/50 flex flex-col gap-2 mb-3">
+                            <h5 class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Completed</h5>
+                            <p class="text-xxs text-slate-500">You scored ${myScore.score}/${myScore.total_questions} (${pct}%) on this quiz.</p>
+                        </div>
+                        <a href="/quiz/${q.id}/take" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-200 dark:hover:bg-slate-100 dark:text-slate-800 rounded-xl font-bold flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-rotate-left text-xs"></i>
+                            <span>Re-attempt Quiz</span>
+                        </a>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <p class="text-slate-500 leading-relaxed mb-3">An AI-generated evaluation quiz with 5 MCQs is ready for this lesson.</p>
+                        <a href="/quiz/${q.id}/take" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center gap-1 transition">
+                            <i class="fa-solid fa-play text-xs"></i>
+                            <span>Take Lesson Quiz</span>
+                        </a>
+                    `;
+                }
+            } else {
+                // Teacher view of active quiz
+                container.innerHTML = `
+                    <div class="bg-indigo-950/20 text-indigo-805 dark:text-indigo-400 rounded-2xl p-4 border border-indigo-250 border-indigo-200/50 flex flex-col gap-1.5 mb-3">
+                        <h5 class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-indigo-500"></i> Active Quiz Online</h5>
+                        <p class="text-xxs text-slate-500">Contains ${q.questions.length} AI-generated multiple choice questions.</p>
+                    </div>
+                    <button id="generate-quiz-btn" onclick="generateAIQuiz()" class="w-full py-2 bg-white hover:bg-indigo-500 hover:text-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold flex items-center justify-center gap-1.5 transition">
+                        <i class="fa-solid fa-rotate text-xs"></i>
+                        <span>Re-generate Quiz</span>
+                    </button>
+                `;
+            }
+        } catch (e) {
+            container.innerHTML = `<div class="text-rose-500">Failed to load quiz details.</div>`;
+        }
+    }
+    
+    {% if is_owner %}
+    async function generateAIQuiz() {
+        const btn = document.getElementById("generate-quiz-btn");
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generating MCQs...`;
+        
+        try {
+            await apiRequest(`/api/lessons/{{ lesson._id }}/quiz/generate`, { method: "POST" });
+            showToast("Quiz generated successfully via Gemini!", "success");
+            loadQuizStatus();
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles text-xs"></i> <span>Generate AI Quiz</span>`;
+            showToast("Failed to generate: " + e.message, "error");
+        }
+    }
+    {% endif %}
+    
+    {% if user.role == 'student' %}
+    // --- Student Progress completes ---
+    async function markLessonComplete() {
+        const btn = document.getElementById("complete-btn");
+        btn.disabled = true;
+        
+        try {
+            const data = await apiRequest(`/api/courses/{{ course._id }}/lessons/{{ lesson._id }}/complete`, { method: "POST" });
+            showToast("Lesson completed!", "success");
+            
+            // Re-render class styles
+            btn.className = "px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-emerald-100 text-emerald-805 dark:bg-emerald-950/45 dark:text-emerald-300 border border-emerald-200/50";
+            btn.innerHTML = `<i class="fa-solid fa-circle-check text-sm"></i> <span>Lesson Completed</span>`;
+            
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch (e) {
+            btn.disabled = false;
+            showToast("Action failed: " + e.message, "error");
+        }
+    }
+    
+    // --- Chat Room Helpers ---
+    
+    function handleChatKey(e) {
+        if (e.key === "Enter") {
+            sendChatMessage();
+        }
+    }
+    
+    async function loadChatHistory() {
+        const container = document.getElementById("chat-messages-container");
+        try {
+            const history = await apiRequest(`/api/chat/history?course_id={{ course._id }}`);
+            if (history && history.length > 0) {
+                container.innerHTML = ""; // Clear instructions card
+                history.forEach(msg => {
+                    appendMessageBubble(msg.sender, msg.text);
+                });
+                scrollChatToBottom();
+            }
+        } catch (e) {
+            console.log("Failed to load chat history", e);
+        }
+    }
+    
+    async function sendChatMessage() {
+        const input = document.getElementById("chat-input");
+        const text = input.value.trim();
+        const sendBtn = document.getElementById("send-chat-btn");
+        
+        if (!text) return;
+        
+        // Append user bubble
+        appendMessageBubble("user", text);
+        input.value = "";
+        scrollChatToBottom();
+        
+        // Append thinking skeleton
+        const container = document.getElementById("chat-messages-container");
+        const loader = document.createElement("div");
+        loader.className = "flex justify-start items-center gap-1 text-slate-400 py-2 animate-pulse";
+        loader.id = "chat-typing-loader";
+        loader.innerHTML = `<i class="fa-solid fa-robot mr-1.5 text-primary-500"></i> AI is reviewing lesson materials...`;
+        container.appendChild(loader);
+        scrollChatToBottom();
+        
+        try {
+            const data = await apiRequest("/api/chat", {
+                method: "POST",
+                body: JSON.stringify({
+                    message: text,
+                    course_id: "{{ course._id }}",
+                    lesson_id: "{{ lesson._id }}"
+                })
+            });
+            
+            loader.remove();
+            appendMessageBubble("ai", data.reply);
+            scrollChatToBottom();
+            
+        } catch (error) {
+            loader.remove();
+            appendMessageBubble("ai", "I had trouble connecting to the Gemini client. Let me know if you would like me to retry explaining: " + text);
+            scrollChatToBottom();
+        }
+    }
+    
+    function appendMessageBubble(sender, text) {
+        const container = document.getElementById("chat-messages-container");
+        const bubble = document.createElement("div");
+        
+        const isUser = (sender === "user");
+        
+        bubble.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+        
+        // Premium formatted bubble
+        const colorClass = isUser ? 'message-user' : 'message-ai';
+        
+        // Simple Markdown Regex Parser
+        let formattedText = text;
+        if (!isUser) {
+            formattedText = text
+                .replace(/### (.*?)\n/g, '<h5 class="font-bold text-sm mt-3 mb-1">$1</h5>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-slate-900 dark:text-white">$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+                .replace(/```(?:[a-zA-Z]+)?\n([\s\S]*?)\n```/g, '<pre class="bg-slate-950 text-emerald-400 p-3 rounded-xl font-mono text-[11px] overflow-x-auto my-3 select-all leading-normal">$1</pre>')
+                .replace(/`([^`]+)`/g, '<code class="bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded font-mono text-red-500 dark:text-rose-400">$1</code>')
+                .replace(/\n/g, "<br>");
+        } else {
+            formattedText = text.replace(/\n/g, "<br>");
+        }
+        
+        bubble.innerHTML = `
+            <div class="message-bubble ${colorClass} text-xs leading-relaxed max-w-[80%]">
+                ${formattedText}
+            </div>
+        `;
+        container.appendChild(bubble);
+    }
+    
+    function scrollChatToBottom() {
+        const container = document.getElementById("chat-messages-container");
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    async function clearChatHistory() {
+        // Simply clear container on screen (we keep history on backend or overwrite)
+        if (confirm("Clear AI Study Assistant messages display?")) {
+            document.getElementById("chat-messages-container").innerHTML = `
+                <div class="text-slate-400 py-8 text-center text-xs">Chat history cleared. Send a message to start fresh.</div>
+            `;
+        }
+    }
+    {% endif %}
+</script>
+{% endblock %}

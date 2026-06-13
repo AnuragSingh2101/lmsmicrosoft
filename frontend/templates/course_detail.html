@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ course.title }} - Agents LMS{% endblock %}
+{% block header_title %}Course Syllabus{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in-up">
+    <!-- Back Navigation -->
+    <div class="flex items-center justify-between">
+        <a href="/courses" class="text-xs font-bold text-slate-400 hover:text-slate-650 flex items-center gap-1">
+            <i class="fa-solid fa-arrow-left text-xxs"></i>
+            <span>Back to Catalog</span>
+        </a>
+        
+        {% if is_owner %}
+        <span class="px-3 py-1 bg-violet-100 text-violet-850 dark:bg-violet-950/45 dark:text-violet-300 rounded-full text-xxs font-bold uppercase tracking-wider">
+            Course Owner
+        </span>
+        {% elif is_enrolled %}
+        <span class="px-3 py-1 bg-emerald-100 text-emerald-850 dark:bg-emerald-950/45 dark:text-emerald-300 rounded-full text-xxs font-bold uppercase tracking-wider">
+            Enrolled Student
+        </span>
+        {% endif %}
+    </div>
+    
+    <!-- Course Title Box -->
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 border border-slate-100 dark:border-slate-700/60 shadow-sm flex flex-col md:flex-row gap-6 items-start">
+        <div class="h-44 w-full md:w-64 bg-slate-100 dark:bg-slate-900 rounded-2xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-750">
+            <img src="/{{ course.thumbnail or 'static/images/course-placeholder.jpg' }}" alt="{{ course.title }}" class="w-full h-full object-cover">
+        </div>
+        <div class="space-y-4 flex-grow">
+            <span class="bg-primary-100 text-primary-800 dark:bg-primary-950/40 dark:text-primary-400 text-xxs font-bold px-2 py-1 rounded-md">{{ course.category }}</span>
+            <h3 class="text-2xl md:text-3xl font-extrabold text-slate-800 dark:text-white leading-tight">{{ course.title }}</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-2xl">{{ course.description }}</p>
+            
+            {% if user.role == 'student' and not is_enrolled %}
+            <button onclick="enrollCourse('{{ course._id }}')" class="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold text-sm shadow-md transition flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-plus"></i>
+                <span>Enroll in Course</span>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Student Certificate Achievement Banner (Only shown if student is enrolled) -->
+    {% if is_enrolled and user.role == 'student' %}
+    <div class="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 rounded-2xl border border-amber-200/50 dark:border-amber-900/30 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div class="flex items-center gap-4">
+            <div class="h-14 w-14 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-3xl shrink-0">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <div>
+                <h4 class="font-extrabold text-base text-amber-800 dark:text-amber-400">Course Certificate Status</h4>
+                <div class="flex items-center gap-2 mt-1">
+                    <div class="w-24 bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden shrink-0">
+                        <div class="bg-amber-500 h-full" style="width: {{ progress.progress_percentage }}%"></div>
+                    </div>
+                    <span class="text-xs font-bold text-amber-700 dark:text-amber-350">{{ progress.progress_percentage }}% Complete</span>
+                </div>
+            </div>
+        </div>
+        
+        {% if progress.progress_percentage >= 100.0 %}
+            <button id="download-cert-btn" onclick="claimCertificate()" class="px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-lg shadow-amber-500/20 flex items-center gap-2 transition duration-200">
+                <i class="fa-solid fa-file-pdf text-base"></i>
+                <span>Download Completion Certificate</span>
+            </button>
+        {% else %}
+            <button disabled class="px-5 py-3 bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-xl font-bold text-xs flex items-center gap-2 cursor-not-allowed">
+                <i class="fa-solid fa-lock text-sm"></i>
+                <span>Complete 100% to Unlock Certificate</span>
+            </button>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <!-- Grid Panels -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Cols: Syllabus Lessons -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="flex justify-between items-center">
+                <h4 class="text-lg font-bold">Lessons & Lectures</h4>
+                
+                {% if is_owner %}
+                <!-- Open add lesson quick form modal or link -->
+                <button onclick="toggleLessonModal()" class="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-plus-circle"></i> Add Lesson Note
+                </button>
+                {% endif %}
+            </div>
+            
+            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm overflow-hidden divide-y divide-slate-100 dark:divide-slate-750/30">
+                {% if lessons %}
+                    {% for lesson in lessons %}
+                    <div class="p-5 flex items-center justify-between gap-4 transition hover:bg-slate-50/50 dark:hover:bg-slate-750/10">
+                        <div class="flex items-center gap-4 overflow-hidden">
+                            <!-- Icon/Checkbox status -->
+                            <div class="shrink-0">
+                                {% if user.role == 'student' and is_enrolled %}
+                                    {% if lesson._id | string in progress.completed_lessons %}
+                                    <span class="h-8 w-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 flex items-center justify-center"><i class="fa-solid fa-circle-check text-base"></i></span>
+                                    {% else %}
+                                    <span class="h-8 w-8 rounded-full bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 flex items-center justify-center font-bold text-xs">{{ loop.index }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="h-8 w-8 rounded-full bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 flex items-center justify-center font-bold text-xs">{{ loop.index }}</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if is_enrolled or is_owner %}
+                                <a href="/lesson/{{ lesson._id }}" class="font-bold text-sm text-slate-800 dark:text-white hover:text-primary-500 transition line-clamp-1 block leading-snug">{{ lesson.title }}</a>
+                                {% else %}
+                                <span class="font-bold text-sm text-slate-450 dark:text-slate-500 line-clamp-1 block leading-snug">{{ lesson.title }}</span>
+                                {% endif %}
+                                <span class="text-xxs text-slate-400 dark:text-slate-500 font-semibold block mt-0.5"><i class="fa-solid fa-clock mr-1"></i>{{ lesson.duration or '0' }} mins</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Teacher Lesson Editing -->
+                        {% if is_owner %}
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button onclick="editLesson('{{ lesson._id }}', '{{ lesson.title }}', '{{ lesson.description }}', '{{ lesson.youtube_id }}', '{{ lesson.duration }}')" class="h-8 w-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center transition" title="Edit lesson">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="deleteLesson('{{ lesson._id }}')" class="h-8 w-8 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-550 text-rose-500 flex items-center justify-center transition" title="Delete lesson">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="py-12 text-center text-slate-450 dark:text-slate-500">
+                        <i class="fa-solid fa-file-circle-exclamation text-4xl text-slate-300 dark:text-slate-650 mb-3 block"></i>
+                        <p class="font-bold text-sm">No lessons found</p>
+                        <p class="text-xs mt-1">This syllabus does not have lectures drafted yet.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Right 1 Col: Assignments List -->
+        <div class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h4 class="text-lg font-bold">Course Assignments</h4>
+                {% if is_owner %}
+                <button onclick="toggleAssignmentModal()" class="text-xs font-bold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-plus-circle"></i> Create Assignment
+                </button>
+                {% endif %}
+            </div>
+            
+            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700/60 p-5 shadow-sm space-y-4">
+                {% if assignments %}
+                    {% for assign in assignments %}
+                    <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl hover:border-primary-400 transition flex flex-col gap-2">
+                        <div>
+                            <h5 class="font-bold text-sm line-clamp-1">{{ assign.title }}</h5>
+                            <span class="text-xxs text-slate-400 dark:text-slate-500 font-semibold block mt-1"><i class="fa-solid fa-calendar mr-1"></i>Due: {{ assign.due_date | string | truncate(16, True, '') }}</span>
+                            <span class="text-xxs text-primary-500 font-bold block mt-1"><i class="fa-solid fa-award mr-1"></i>Marks: {{ assign.max_marks }}</span>
+                        </div>
+                        
+                        <div class="flex gap-2 mt-1">
+                            <a href="/assignments/{{ assign._id }}" class="flex-grow py-2 text-center bg-white hover:bg-primary-500 hover:text-white dark:bg-slate-800 dark:hover:bg-primary-600 border border-slate-200 dark:border-slate-700 text-slate-850 dark:text-slate-200 rounded-xl font-bold transition text-xs">
+                                {% if is_owner %}
+                                <span>Submissions & Grade</span>
+                                {% else %}
+                                <span>Submit Work</span>
+                                {% endif %}
+                            </a>
+                            
+                            {% if is_owner %}
+                            <button onclick="deleteAssignment('{{ assign._id }}')" class="px-2.5 bg-rose-50 hover:bg-rose-100 text-rose-500 border border-rose-200 rounded-xl transition" title="Delete assignment">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="py-6 text-center text-slate-450 dark:text-slate-500 text-xs">
+                        <i class="fa-solid fa-inbox text-2xl text-slate-350 dark:text-slate-650 mb-2 block"></i>
+                        No assignments added.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- ================= MODALS (LESSON AND ASSIGNMENT BUILDERS) ================= -->
+
+{% if is_owner %}
+<!-- 1. Lesson Modal Builder -->
+<div id="lesson-modal" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 max-w-md w-full border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center">
+            <h4 id="lesson-modal-title" class="text-lg font-bold">Create Course Lesson</h4>
+            <button onclick="toggleLessonModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        
+        <form id="lesson-form" class="space-y-4">
+            <input type="hidden" id="edit-lesson-id">
+            <div>
+                <label for="lesson-title" class="block text-xs font-bold text-slate-400 uppercase mb-2">Lesson Title</label>
+                <input type="text" id="lesson-title" required placeholder="e.g. Setting up Virtual Environments" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+            </div>
+            <div>
+                <label for="lesson-desc" class="block text-xs font-bold text-slate-400 uppercase mb-2">Description</label>
+                <textarea id="lesson-desc" required rows="3" placeholder="Brief outline of lesson learning objective..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="lesson-yt" class="block text-xs font-bold text-slate-400 uppercase mb-2">YouTube Video ID</label>
+                    <input type="text" id="lesson-yt" placeholder="e.g. dQw4w9WgXcQ" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+                </div>
+                <div>
+                    <label for="lesson-dur" class="block text-xs font-bold text-slate-400 uppercase mb-2">Duration (mins)</label>
+                    <input type="number" id="lesson-dur" required value="10" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+                </div>
+            </div>
+            <div>
+                <label for="lesson-notes" class="block text-xs font-bold text-slate-400 uppercase mb-2">PDF Lecture Notes</label>
+                <input type="file" id="lesson-notes" accept="application/pdf" class="w-full text-xs text-slate-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+            </div>
+            
+            <button type="submit" id="lesson-submit-btn" class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md">Create Lesson</button>
+        </form>
+    </div>
+</div>
+
+<!-- 2. Assignment Modal Builder -->
+<div id="assignment-modal" class="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 max-w-md w-full border border-slate-100 dark:border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4">
+        <div class="flex justify-between items-center">
+            <h4 class="text-lg font-bold">Create Assignment</h4>
+            <button onclick="toggleAssignmentModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        
+        <form id="assignment-form" class="space-y-4">
+            <div>
+                <label for="assign-title" class="block text-xs font-bold text-slate-400 uppercase mb-2">Assignment Title</label>
+                <input type="text" id="assign-title" required placeholder="e.g. Python Function Lab" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+            </div>
+            <div>
+                <label for="assign-instr" class="block text-xs font-bold text-slate-400 uppercase mb-2">Instructions</label>
+                <textarea id="assign-instr" required rows="3" placeholder="Provide details on submission formats, requirements, and questions..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs"></textarea>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="assign-marks" class="block text-xs font-bold text-slate-400 uppercase mb-2">Maximum Marks</label>
+                    <input type="number" id="assign-marks" required value="100" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+                </div>
+                <div>
+                    <label for="assign-due" class="block text-xs font-bold text-slate-400 uppercase mb-2">Due Date</label>
+                    <input type="date" id="assign-due" required class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 rounded-xl outline-none text-xs">
+                </div>
+            </div>
+            
+            <button type="submit" class="w-full py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md">Create Assignment</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    {% if user.role == 'student' %}
+    async function enrollCourse(courseId) {
+        try {
+            await apiRequest(`/api/courses/${courseId}/enroll`, { method: "POST" });
+            showToast("Enrolled successfully!", "success");
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } catch (e) {
+            showToast("Failed to enroll: " + e.message, "error");
+        }
+    }
+    
+    async function claimCertificate() {
+        const btn = document.getElementById("download-cert-btn");
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Generating...`;
+        
+        try {
+            const data = await apiRequest(`/api/courses/{{ course._id }}/certificate`);
+            showToast(data.message || "Certificate is generated and verified!", "success");
+            
+            // Wait 1 sec and open certificate file path in a new browser tab to download
+            setTimeout(() => {
+                window.open("/" + data.certificate.file_path, "_blank");
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-file-pdf text-base"></i> <span>Download Completion Certificate</span>`;
+            }, 1000);
+            
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-file-pdf text-base"></i> <span>Download Completion Certificate</span>`;
+            showToast("Failed to issue certificate: " + e.message, "error");
+        }
+    }
+    {% endif %}
+    
+    {% if is_owner %}
+    // --- Lesson CRUD ---
+    
+    function toggleLessonModal() {
+        const modal = document.getElementById("lesson-modal");
+        modal.classList.toggle("hidden");
+        // Reset form to default (Create mode)
+        if (modal.classList.contains("hidden")) {
+            document.getElementById("lesson-form").reset();
+            document.getElementById("edit-lesson-id").value = "";
+            document.getElementById("lesson-modal-title").textContent = "Create Course Lesson";
+            document.getElementById("lesson-submit-btn").textContent = "Create Lesson";
+        }
+    }
+    
+    function editLesson(id, title, desc, yt, duration) {
+        document.getElementById("edit-lesson-id").value = id;
+        document.getElementById("lesson-title").value = title;
+        document.getElementById("lesson-desc").value = desc;
+        document.getElementById("lesson-yt").value = yt;
+        document.getElementById("lesson-dur").value = duration;
+        
+        document.getElementById("lesson-modal-title").textContent = "Modify Lesson Details";
+        document.getElementById("lesson-submit-btn").textContent = "Save Changes";
+        
+        document.getElementById("lesson-modal").classList.remove("hidden");
+    }
+    
+    document.getElementById("lesson-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const editId = document.getElementById("edit-lesson-id").value;
+        const title = document.getElementById("lesson-title").value;
+        const description = document.getElementById("lesson-desc").value;
+        const youtube_id = document.getElementById("lesson-yt").value;
+        const duration = document.getElementById("lesson-dur").value;
+        const notesFile = document.getElementById("lesson-notes").files[0];
+        
+        const submitBtn = document.getElementById("lesson-submit-btn");
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
+        
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("description", description);
+        formData.append("youtube_id", youtube_id);
+        formData.append("duration", duration);
+        if (notesFile) {
+            formData.append("notes", notesFile);
+        }
+        
+        const url = editId ? `/api/lessons/${editId}` : `/api/courses/{{ course._id }}/lessons`;
+        const method = editId ? "PUT" : "POST";
+        
+        try {
+            const response = await fetch(url, {
+                method: method,
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || "Save action failed");
+            }
+            
+            showToast(editId ? "Lesson updated!" : "Lesson added successfully!", "success");
+            toggleLessonModal();
+            setTimeout(() => { window.location.reload(); }, 600);
+            
+        } catch (error) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = editId ? "Save Changes" : "Create Lesson";
+            showToast("Failed: " + error.message, "error");
+        }
+    });
+    
+    async function deleteLesson(lessonId) {
+        if (!confirm("Are you sure you want to delete this lesson note?")) {
+            return;
+        }
+        try {
+            await apiRequest(`/api/lessons/${lessonId}`, { method: "DELETE" });
+            showToast("Lesson deleted!", "success");
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch(e) {
+            showToast("Failed to delete lesson: " + e.message, "error");
+        }
+    }
+    
+    // --- Assignment CRUD ---
+    
+    function toggleAssignmentModal() {
+        document.getElementById("assignment-modal").classList.toggle("hidden");
+    }
+    
+    document.getElementById("assignment-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const title = document.getElementById("assign-title").value;
+        const instructions = document.getElementById("assign-instr").value;
+        const max_marks = document.getElementById("assign-marks").value;
+        const due_date = document.getElementById("assign-due").value;
+        
+        try {
+            await apiRequest(`/api/courses/{{ course._id }}/assignments`, {
+                method: "POST",
+                body: JSON.stringify({ title, instructions, max_marks, due_date })
+            });
+            showToast("Assignment created successfully!", "success");
+            toggleAssignmentModal();
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch (error) {
+            showToast("Failed to create assignment: " + error.message, "error");
+        }
+    });
+    
+    async function deleteAssignment(assignId) {
+        if (!confirm("Are you sure you want to delete this homework? All submissions will be deleted!")) {
+            return;
+        }
+        try {
+            await apiRequest(`/api/assignments/${assignId}`, { method: "DELETE" });
+            showToast("Assignment deleted!", "success");
+            setTimeout(() => { window.location.reload(); }, 600);
+        } catch (e) {
+            showToast("Failed to delete assignment: " + e.message, "error");
+        }
+    }
+    {% endif %}
+</script>
+{% endblock %}

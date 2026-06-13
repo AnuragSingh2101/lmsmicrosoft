@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Dashboard - Agents LMS{% endblock %}
+{% block header_title %}Student Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in-up">
+    <!-- Welcome Banner -->
+    <div class="relative overflow-hidden bg-gradient-to-r from-primary-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-primary-500/10">
+        <div class="relative z-10 max-w-xl">
+            <span class="text-xs font-bold uppercase tracking-wider text-primary-200">Welcome Back</span>
+            <h3 class="text-3xl font-extrabold mt-1">Hello, {{ user.name }}!</h3>
+            <p class="text-primary-100 text-sm mt-2 leading-relaxed">Ready to continue your learning journey? Check your course metrics below or let our AI study advisor recommend your next steps.</p>
+        </div>
+        <!-- Decorative Background Circle -->
+        <div class="absolute right-0 bottom-0 translate-y-1/3 translate-x-1/4 h-64 w-64 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+    </div>
+    
+    <!-- Analytics Metrics Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Enrolled Courses -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+            <div class="h-12 w-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <div>
+                <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Enrolled Courses</span>
+                <h4 id="stat-enrolled" class="text-2xl font-bold mt-1 text-slate-800 dark:text-white"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h4>
+            </div>
+        </div>
+        
+        <!-- Completed Courses -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+            <div class="h-12 w-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Completed</span>
+                <h4 id="stat-completed" class="text-2xl font-bold mt-1 text-slate-800 dark:text-white"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h4>
+            </div>
+        </div>
+        
+        <!-- Quiz Average -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+            <div class="h-12 w-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-500 dark:text-amber-400 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <div>
+                <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Quiz Score Avg</span>
+                <h4 id="stat-quiz" class="text-2xl font-bold mt-1 text-slate-800 dark:text-white"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h4>
+            </div>
+        </div>
+        
+        <!-- Learning Time -->
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm flex items-center gap-4">
+            <div class="h-12 w-12 rounded-xl bg-violet-50 dark:bg-violet-950/40 text-violet-500 dark:text-violet-400 flex items-center justify-center text-xl shrink-0">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <div>
+                <span class="text-xxs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Total Learn Time</span>
+                <h4 id="stat-time" class="text-2xl font-bold mt-1 text-slate-800 dark:text-white"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h4>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content Section -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- Left 2 Columns: Enrolled Courses List -->
+        <div class="xl:col-span-2 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold">My Active Enrollments</h3>
+                <a href="/courses" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline">Explore Catalog <i class="fa-solid fa-arrow-right text-xxs"></i></a>
+            </div>
+            
+            <div id="enrolled-courses-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Dynamically populated -->
+                <div class="col-span-full py-12 text-center text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl mb-3 block"></i>
+                    <span>Loading courses...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right 1 Column: AI Smart Recommendations -->
+        <div class="space-y-4">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-primary-500 text-lg"></i>
+                <h3 class="text-lg font-bold">AI Recommended for You</h3>
+            </div>
+            
+            <div id="recommendations-container" class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/60 shadow-sm space-y-4">
+                <!-- Dynamically populated -->
+                <div class="py-8 text-center text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 block"></i>
+                    <span>Thinking up smart suggestions...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAnalyticsData();
+        loadStudentCourses();
+    });
+    
+    async function loadAnalyticsData() {
+        try {
+            const data = await apiRequest("/api/analytics/student");
+            
+            // Populate metrics
+            document.getElementById("stat-enrolled").textContent = data.enrolled_count;
+            document.getElementById("stat-completed").textContent = data.completed_count;
+            document.getElementById("stat-quiz").textContent = data.quiz_average_percentage > 0 ? `${data.quiz_average_percentage}%` : 'N/A';
+            
+            // Formatting learn time
+            const mins = data.learning_time_minutes;
+            if (mins >= 60) {
+                document.getElementById("stat-time").textContent = `${Math.floor(mins/60)}h ${mins%60}m`;
+            } else {
+                document.getElementById("stat-time").textContent = `${mins} mins`;
+            }
+            
+            // Populate AI Recommendations
+            populateRecommendations(data.recommendations);
+            
+        } catch (e) {
+            showToast("Failed to load analytics metrics: " + e.message, "error");
+        }
+    }
+    
+    async function loadStudentCourses() {
+        try {
+            const enrollments = await apiRequest("/api/courses/enrolled");
+            const container = document.getElementById("enrolled-courses-container");
+            container.innerHTML = "";
+            
+            if (enrollments.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white dark:bg-slate-800 rounded-2xl p-8 border border-slate-100 dark:border-slate-700/60 shadow-sm text-center text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-graduation-cap text-4xl text-slate-300 dark:text-slate-600 mb-3 block"></i>
+                        <p class="font-bold">Not enrolled in any courses yet</p>
+                        <p class="text-xs mt-1 mb-4">Browse our catalog and start your learning journey!</p>
+                        <a href="/courses" class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-semibold text-xs transition">Browse Catalog</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            enrollments.forEach(e => {
+                const percentage = e.progress_percentage || 0;
+                
+                const card = document.createElement("div");
+                card.className = "bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-750 shadow-sm overflow-hidden hover-scale flex flex-col justify-between";
+                
+                card.innerHTML = `
+                    <div>
+                        <!-- Thumbnail -->
+                        <div class="h-36 bg-slate-100 dark:bg-slate-900 relative">
+                            <img src="/${e.course_thumbnail || 'static/images/course-placeholder.jpg'}" alt="${e.course_title}" class="w-full h-full object-cover">
+                            <span class="absolute top-3 left-3 bg-white/95 dark:bg-slate-850/95 text-slate-800 dark:text-white text-xxs font-bold px-2 py-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-800">${e.course_category}</span>
+                        </div>
+                        
+                        <div class="p-5">
+                            <span class="text-xxs font-bold text-slate-450 uppercase block">Instructor: ${e.teacher_name}</span>
+                            <h4 class="font-bold text-base mt-1 text-slate-800 dark:text-white leading-tight line-clamp-1">${e.course_title}</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">${e.course_description}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress & Footer -->
+                    <div class="px-5 pb-5 pt-2 border-t border-slate-50 dark:border-slate-750/30">
+                        <div class="flex justify-between items-center text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">
+                            <span>Progress</span>
+                            <span class="text-primary-500">${percentage}%</span>
+                        </div>
+                        <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden mb-4">
+                            <div class="bg-gradient-to-r from-primary-500 to-indigo-500 h-full transition-all duration-300" style="width: ${percentage}%"></div>
+                        </div>
+                        <a href="/course/${e.course_id}" class="w-full py-2.5 bg-slate-50 hover:bg-primary-50 hover:text-primary-600 dark:bg-slate-750 dark:hover:bg-slate-700 dark:hover:text-primary-400 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition flex items-center justify-center gap-1.5 text-xs">
+                            <span>Resume Course</span>
+                            <i class="fa-solid fa-circle-play text-sm"></i>
+                        </a>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+            
+        } catch (e) {
+            showToast("Failed to load student enrollments: " + e.message, "error");
+        }
+    }
+    
+    function populateRecommendations(recs) {
+        const container = document.getElementById("recommendations-container");
+        container.innerHTML = "";
+        
+        if (!recs || recs.length === 0) {
+            container.innerHTML = `
+                <div class="py-6 text-center text-slate-400 text-xs">
+                    <i class="fa-solid fa-wand-magic-sparkles text-2xl mb-2 text-slate-350 dark:text-slate-650 block"></i>
+                    No suggestions available at the moment.
+                </div>
+            `;
+            return;
+        }
+        
+        recs.forEach(r => {
+            const recCard = document.createElement("div");
+            recCard.className = "p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col gap-3 transition hover:border-primary-400 dark:hover:border-primary-500";
+            
+            recCard.innerHTML = `
+                <div>
+                    <span class="inline-block bg-primary-100 text-primary-800 dark:bg-primary-950/40 dark:text-primary-400 text-xxs font-bold px-1.5 py-0.5 rounded-md mb-1.5">${r.category}</span>
+                    <h5 class="font-bold text-sm text-slate-850 dark:text-slate-200 line-clamp-1 leading-snug">${r.title}</h5>
+                    <p class="text-xxs text-slate-400 dark:text-slate-500 mt-2 font-semibold italic flex gap-1.5 leading-relaxed">
+                        <i class="fa-solid fa-quote-left text-xxs text-primary-500 shrink-0 mt-0.5"></i>
+                        <span>${r.reason}</span>
+                    </p>
+                </div>
+                <button onclick="enrollCourse('${r.id}')" class="py-2 bg-white hover:bg-primary-500 hover:text-white dark:bg-slate-800 dark:hover:bg-primary-600 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 rounded-xl font-bold transition text-xs flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-circle-plus text-xs"></i>
+                    <span>Quick Enroll</span>
+                </button>
+            `;
+            container.appendChild(recCard);
+        });
+    }
+    
+    async function enrollCourse(courseId) {
+        try {
+            await apiRequest(`/api/courses/${courseId}/enroll`, {
+                method: "POST"
+            });
+            showToast("Enrolled successfully! Ready to learn.", "success");
+            // Reload page states
+            loadAnalyticsData();
+            loadStudentCourses();
+        } catch (e) {
+            showToast("Enrollment failed: " + e.message, "error");
+        }
+    }
+</script>
+{% endblock %}
+

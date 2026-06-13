@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Take Quiz: {{ lesson.title }} - Agents LMS{% endblock %}
+{% block header_title %}Lesson Evaluation Quiz{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6 animate-fade-in-up pb-8">
+    <!-- Quiz Header Info -->
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm flex justify-between items-center gap-4">
+        <div>
+            <span class="text-xxs font-bold text-slate-400 uppercase tracking-wider block">Course: {{ course.title }}</span>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white leading-tight mt-1">Quiz for: {{ lesson.title }}</h3>
+        </div>
+        <a href="/lesson/{{ lesson._id }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-750 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-350 rounded-xl font-bold transition text-xs shrink-0">
+            <i class="fa-solid fa-arrow-left mr-1"></i> Return to Lesson
+        </a>
+    </div>
+    
+    <!-- QUIZ INTERACTIVE VIEW STATE -->
+    <div id="quiz-workspace-panel" class="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-lg overflow-hidden flex flex-col min-h-[420px]">
+        
+        <!-- Progress Bar Indicator -->
+        <div class="w-full bg-slate-100 dark:bg-slate-750 h-1.5 shrink-0 overflow-hidden">
+            <div id="quiz-wizard-progress" class="bg-gradient-to-r from-primary-500 to-indigo-500 h-full transition-all duration-300" style="width: 20%"></div>
+        </div>
+        
+        <!-- Question content space -->
+        <div class="p-6 md:p-8 flex-grow flex flex-col justify-between">
+            <div class="space-y-6">
+                <!-- Question Title Indicator -->
+                <div class="flex justify-between items-center text-slate-450 dark:text-slate-500 text-xxs font-bold uppercase tracking-wider">
+                    <span id="question-index-indicator">Question 1 of 5</span>
+                    <span class="text-primary-500"><i class="fa-solid fa-hourglass-half mr-1"></i>Self-Paced</span>
+                </div>
+                
+                <!-- Question Text -->
+                <h4 id="question-text" class="text-base md:text-lg font-extrabold text-slate-850 dark:text-slate-100 leading-snug">
+                    <!-- Loaded via JS -->
+                </h4>
+                
+                <!-- Option selection cards -->
+                <div id="options-container" class="grid grid-cols-1 gap-3 pt-2">
+                    <!-- Option items loaded dynamically -->
+                </div>
+            </div>
+            
+            <!-- Prev/Next Controls -->
+            <div class="flex justify-between items-center border-t border-slate-50 dark:border-slate-750/30 pt-6 mt-8 shrink-0">
+                <button id="prev-btn" onclick="wizardPrev()" disabled class="px-5 py-2.5 bg-slate-50 border border-slate-200 dark:border-slate-750 text-slate-400 dark:text-slate-550 rounded-xl font-bold transition text-xs disabled:opacity-40 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Previous
+                </button>
+                <button id="next-btn" onclick="wizardNext()" class="px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md shadow-primary-500/15">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- QUIZ FEEDBACK RESULTS VIEW (HIDDEN BY DEFAULT) -->
+    <div id="quiz-results-panel" class="hidden bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700/60 shadow-lg p-6 md:p-8 space-y-6">
+        <!-- Score Circle Hero -->
+        <div class="flex flex-col items-center text-center py-6">
+            <div class="h-28 w-28 rounded-full bg-gradient-to-br from-primary-500 to-indigo-500 text-white flex flex-col items-center justify-center shadow-xl shadow-primary-500/20 mb-4">
+                <span id="results-score" class="text-3xl font-extrabold leading-none">4/5</span>
+                <span class="text-xxs font-semibold uppercase tracking-widest text-primary-200 mt-1">Score</span>
+            </div>
+            <h4 id="results-headline" class="text-xl font-extrabold">Excellent Effort!</h4>
+            <p class="text-slate-500 dark:text-slate-400 text-xs mt-1">Review the question breakdown and AI-generated explanations below.</p>
+        </div>
+        
+        <!-- Detailed feedback list -->
+        <div id="results-review-container" class="space-y-4">
+            <!-- Questions list with AIs answers explanation -->
+        </div>
+        
+        <div class="pt-6 border-t border-slate-100 dark:border-slate-750/30 flex justify-end gap-3">
+            <a href="/lesson/{{ lesson._id }}" class="px-6 py-3 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold shadow-lg shadow-primary-500/20 transition text-sm">
+                <span>Continue Lesson</span>
+                <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
+            </a>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Quiz JSON payload from Jinja
+    const quizPayload = {{ quiz | tojson }};
+    const questions = quizPayload.questions;
+    const totalQuestions = questions.length;
+    
+    let currentIndex = 0;
+    // Array to store selected option indices (0 to 3)
+    const selections = new Array(totalQuestions).fill(null);
+    
+    document.addEventListener("DOMContentLoaded", () => {
+        loadQuestion(0);
+    });
+    
+    function loadQuestion(index) {
+        const q = questions[index];
+        
+        // Update Indicator & Progress
+        document.getElementById("question-index-indicator").textContent = `Question ${index + 1} of ${totalQuestions}`;
+        document.getElementById("quiz-wizard-progress").style.width = `${((index + 1) / totalQuestions) * 100}%`;
+        
+        // Load text
+        document.getElementById("question-text").textContent = q.question_text;
+        
+        // Load options
+        const container = document.getElementById("options-container");
+        container.innerHTML = "";
+        
+        q.options.forEach((optText, optIdx) => {
+            const letter = ["A", "B", "C", "D"][optIdx];
+            const isSelected = selections[index] === optIdx;
+            
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.onclick = () => selectOption(index, optIdx);
+            btn.className = `w-full text-left p-4 border-2 rounded-2xl flex items-center gap-4 transition duration-150 ${isSelected ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/10' : 'border-slate-200 dark:border-slate-700 hover:border-slate-350 dark:hover:border-slate-600'}`;
+            
+            btn.innerHTML = `
+                <span class="h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${isSelected ? 'bg-primary-500 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-750 dark:text-slate-400'}">${letter}</span>
+                <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-snug">${optText}</span>
+            `;
+            container.appendChild(btn);
+        });
+        
+        // Update Buttons state
+        document.getElementById("prev-btn").disabled = (index === 0);
+        
+        const nextBtn = document.getElementById("next-btn");
+        if (index === totalQuestions - 1) {
+            nextBtn.className = "px-6 py-2.5 bg-indigo-650 hover:bg-indigo-550 text-white rounded-xl font-bold transition text-xs shadow-md shadow-indigo-500/15";
+            nextBtn.innerHTML = `<span>Submit Answers</span> <i class="fa-solid fa-circle-check ml-1"></i>`;
+        } else {
+            nextBtn.className = "px-6 py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition text-xs shadow-md shadow-primary-500/15";
+            nextBtn.innerHTML = `<span>Next</span> <i class="fa-solid fa-chevron-right ml-1"></i>`;
+        }
+    }
+    
+    function selectOption(qIdx, optIdx) {
+        selections[qIdx] = optIdx;
+        loadQuestion(qIdx); // re-load to update active states
+    }
+    
+    function wizardPrev() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            loadQuestion(currentIndex);
+        }
+    }
+    
+    function wizardNext() {
+        if (selections[currentIndex] === null) {
+            showToast("Please pick an answer to proceed!", "error");
+            return;
+        }
+        
+        if (currentIndex < totalQuestions - 1) {
+            currentIndex++;
+            loadQuestion(currentIndex);
+        } else {
+            // Submit Quiz
+            submitQuizAnswers();
+        }
+    }
+    
+    async function submitQuizAnswers() {
+        // Convert selected numeric options to matching letter A, B, C, D
+        const lettersList = selections.map(idx => ["A", "B", "C", "D"][idx]);
+        
+        const nextBtn = document.getElementById("next-btn");
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Grading...`;
+        
+        try {
+            const data = await apiRequest(`/api/quizzes/${quizPayload._id}/submit`, {
+                method: "POST",
+                body: JSON.stringify({
+                    answers: lettersList
+                })
+            });
+            
+            showToast("Quiz submitted and graded!", "success");
+            renderFeedbackView(data);
+            
+        } catch (e) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = `<span>Submit Answers</span> <i class="fa-solid fa-circle-check ml-1"></i>`;
+            showToast("Submission failed: " + e.message, "error");
+        }
+    }
+    
+    function renderFeedbackView(data) {
+        // Switch views
+        document.getElementById("quiz-workspace-panel").classList.add("hidden");
+        const resultsPanel = document.getElementById("quiz-results-panel");
+        resultsPanel.classList.remove("hidden");
+        
+        // Set Score
+        document.getElementById("results-score").textContent = `${data.score}/${data.total_questions}`;
+        
+        // Headline text based on score percentage
+        const pct = (data.score / data.total_questions) * 100;
+        let headline = "Keep Practicing!";
+        if (pct >= 80) headline = "Outstanding Job! 🎓";
+        else if (pct >= 60) headline = "Well Done! 👍";
+        document.getElementById("results-headline").textContent = headline;
+        
+        // Populate question details
+        const container = document.getElementById("results-review-container");
+        container.innerHTML = "";
+        
+        data.results.forEach((res, idx) => {
+            const originalQ = questions[res.question_index];
+            const isCorrect = res.is_correct;
+            
+            const item = document.createElement("div");
+            item.className = `p-5 border rounded-2xl flex flex-col gap-3 ${isCorrect ? 'border-emerald-250 bg-emerald-50/15' : 'border-rose-250 bg-rose-50/15'}`;
+            
+            // Map selected letters to option texts
+            const studentSelectionText = originalQ.options[["A", "B", "C", "D"].indexOf(res.student_answer)];
+            const correctSelectionText = originalQ.options[["A", "B", "C", "D"].indexOf(res.correct_answer)];
+            
+            item.innerHTML = `
+                <div>
+                    <span class="text-xxs font-bold uppercase tracking-wider block mb-1.5 ${isCorrect ? 'text-emerald-500' : 'text-rose-500'}">
+                        <i class="fa-solid ${isCorrect ? 'fa-circle-check' : 'fa-circle-xmark'} mr-1"></i>
+                        Question ${idx + 1}: ${isCorrect ? 'Correct' : 'Incorrect'}
+                    </span>
+                    <h5 class="font-bold text-sm text-slate-800 dark:text-white leading-snug">${originalQ.question_text}</h5>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <div class="p-3 rounded-xl border ${isCorrect ? 'bg-emerald-50/30 border-emerald-200' : 'bg-rose-50/30 border-rose-200'}">
+                        <span class="text-xxs font-bold text-slate-400 uppercase block mb-1">Your Selection</span>
+                        <p class="font-semibold text-slate-700 dark:text-slate-300 leading-tight">(${res.student_answer}) ${studentSelectionText}</p>
+                    </div>
+                    {% if not isCorrect %}
+                    <div class="p-3 rounded-xl border bg-emerald-50/30 border-emerald-200">
+                        <span class="text-xxs font-bold text-slate-400 uppercase block mb-1">Correct Answer</span>
+                        <p class="font-semibold text-slate-700 dark:text-slate-350 leading-tight">(${res.correct_answer}) ${correctSelectionText}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- AI Explanation -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xxs leading-relaxed text-slate-500 dark:text-slate-450">
+                    <strong class="font-bold text-slate-700 dark:text-slate-300 block mb-1"><i class="fa-solid fa-wand-magic-sparkles mr-1 text-primary-500"></i>AI Explanatory Notes:</strong>
+                    <span>${res.explanation}</span>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Course Catalog - Agents LMS{% endblock %}
+{% block header_title %}Course Catalog{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in-up">
+    <!-- Filters and Category Tabs -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/60 shadow-sm">
+        <!-- Category Tabs -->
+        <div class="flex flex-wrap gap-1.5">
+            <a href="/courses" class="px-4 py-2 text-xs font-bold rounded-xl transition duration-150 {% if not selected_category %}bg-primary-500 text-white shadow-md shadow-primary-500/15{% else %}bg-slate-50 hover:bg-slate-100 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-750 dark:text-slate-350{% endif %}">
+                All Subjects
+            </a>
+            {% for cat in categories %}
+            <a href="/courses?category={{ cat }}" class="px-4 py-2 text-xs font-bold rounded-xl transition duration-150 {% if selected_category == cat %}bg-primary-500 text-white shadow-md shadow-primary-500/15{% else %}bg-slate-50 hover:bg-slate-100 text-slate-600 dark:bg-slate-900 dark:hover:bg-slate-750 dark:text-slate-350{% endif %}">
+                {{ cat }}
+            </a>
+            {% endfor %}
+        </div>
+        
+        <!-- Search bar layout (client-side simple filter) -->
+        <div class="relative max-w-xs w-full">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 dark:text-slate-550">
+                <i class="fa-solid fa-magnifying-glass text-sm"></i>
+            </span>
+            <input type="text" id="course-search-input" placeholder="Search catalog..." class="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:border-primary-500 dark:focus:border-primary-500 rounded-xl outline-none text-xs transition duration-150">
+        </div>
+    </div>
+    
+    <!-- Course Grid -->
+    {% if courses %}
+    <div id="course-catalog-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for course in courses %}
+        <div class="course-card bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-750 shadow-sm overflow-hidden hover-scale flex flex-col justify-between" data-title="{{ course.title.lower() }}" data-desc="{{ course.description.lower() }}">
+            <div>
+                <!-- Image thumbnail -->
+                <div class="h-40 bg-slate-100 dark:bg-slate-900 relative">
+                    <img src="/{{ course.thumbnail or 'static/images/course-placeholder.jpg' }}" alt="{{ course.title }}" class="w-full h-full object-cover">
+                    <span class="absolute top-3 left-3 bg-white/95 dark:bg-slate-850/95 text-slate-800 dark:text-white text-xxs font-bold px-2 py-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-800">{{ course.category }}</span>
+                </div>
+                
+                <!-- Content -->
+                <div class="p-5">
+                    <h4 class="font-bold text-base text-slate-850 dark:text-white leading-tight line-clamp-2">{{ course.title }}</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-2 line-clamp-3 leading-relaxed">{{ course.description }}</p>
+                </div>
+            </div>
+            
+            <!-- Actions Footer -->
+            <div class="px-5 pb-5 pt-3 border-t border-slate-50 dark:border-slate-750/30 flex flex-col gap-2">
+                {% if user.role == 'student' %}
+                    {% if course._id | string in enrolled_ids %}
+                    <a href="/course/{{ course._id }}" class="w-full py-2.5 bg-slate-50 hover:bg-primary-50 hover:text-primary-600 dark:bg-slate-750 dark:hover:bg-slate-700 dark:hover:text-primary-400 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition flex items-center justify-center gap-1 text-xs">
+                        <span>Resume Course</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </a>
+                    {% else %}
+                    <button onclick="enrollCourse('{{ course._id }}', this)" class="w-full py-2.5 bg-primary-600 hover:bg-primary-500 text-white rounded-xl font-bold transition flex items-center justify-center gap-1 text-xs">
+                        <i class="fa-solid fa-circle-plus text-xs"></i>
+                        <span>Enroll Now</span>
+                    </button>
+                    {% endif %}
+                {% elif user.role == 'teacher' %}
+                    <a href="/course/{{ course._id }}" class="w-full py-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-750 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition flex items-center justify-center gap-1 text-xs">
+                        <span>View Syllabus</span>
+                        <i class="fa-solid fa-eye text-xs"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty catalog state -->
+    <div class="bg-white dark:bg-slate-800 rounded-2xl py-16 text-center border border-slate-100 dark:border-slate-700/60 shadow-sm">
+        <i class="fa-solid fa-book-open text-5xl text-slate-250 dark:text-slate-650 mb-4 block animate-bounce"></i>
+        <p class="font-bold text-lg">No courses found</p>
+        <p class="text-slate-550 dark:text-slate-450 text-xs mt-1">There are no courses listed in this category yet.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Live Search Filter
+    const searchInput = document.getElementById("course-search-input");
+    const cards = document.querySelectorAll(".course-card");
+    
+    if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            cards.forEach(card => {
+                const title = card.getAttribute("data-title");
+                const desc = card.getAttribute("data-desc");
+                if (title.includes(query) || desc.includes(query)) {
+                    card.classList.remove("hidden");
+                } else {
+                    card.classList.add("hidden");
+                }
+            });
+        });
+    }
+
+    async function enrollCourse(courseId, btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Enrolling...`;
+        
+        try {
+            await apiRequest(`/api/courses/${courseId}/enroll`, {
+                method: "POST"
+            });
+            showToast("Successfully enrolled in course!", "success");
+            setTimeout(() => {
+                window.location.href = `/course/${courseId}`;
+            }, 800);
+        } catch (e) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fa-solid fa-circle-plus text-xs"></i> <span>Enroll Now</span>`;
+            showToast("Failed to enroll: " + e.message, "error");
+        }
+    }
+</script>
+{% endblock %}
